@@ -2,17 +2,21 @@ import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import './App.css';
 
+// Connects to the same URL the site is hosted on
 const socket = io();
 
 function App() {
-  const [view, setView] = useState('LANDING'); 
-  const [role, setRole] = useState(''); 
+  const [view, setView] = useState('LANDING'); // LANDING, INSTRUCTOR, STUDENT_LOGIN, CHAT
+  const [role, setRole] = useState(''); // 'INSTRUCTOR' or 'STUDENT'
+  
+  // State
   const [threadId, setThreadId] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [notes, setNotes] = useState([]);
   const [systemMsg, setSystemMsg] = useState('');
+
   const chatEndRef = useRef(null);
 
   useEffect(() => {
@@ -48,6 +52,7 @@ function App() {
     return () => socket.off();
   }, [threadId]);
 
+  // Auto-scroll to bottom
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [notes]);
@@ -78,13 +83,21 @@ function App() {
     }
   };
 
+  // --- VIEWS ---
+
   if (view === 'LANDING') {
     return (
       <div className="crt-container">
         <div className="scanline"></div>
         <div className="content center-screen">
-          <h1>CLASS_NOTES_OS v1.0</h1>
-          <p>SELECT OPERATING MODE:</p>
+          
+          {/* UPDATED HEADER TEXT */}
+          <h1>Chat App!</h1>
+          <p>University of Southern California -- 2026</p>
+          <p>Note taking app for DSO 531</p>
+          
+          <br /> {/* Small spacer */}
+
           <div className="menu">
             <button onClick={createThread}>[ INSTRUCTOR MODE ]</button>
             <button onClick={() => setView('STUDENT_LOGIN')}>[ STUDENT LOGIN ]</button>
@@ -136,7 +149,7 @@ function App() {
 
         <div className="chat-window">
           {systemMsg && <div className="sys-msg"> &gt; {systemMsg}</div>}
-
+          
           {notes.map((note, idx) => (
              note.system ? 
              <div key={idx} className="sys-msg">{note.text}</div> :
