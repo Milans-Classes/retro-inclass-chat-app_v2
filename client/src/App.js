@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import './App.css';
 
-// UPDATED: No URL passed here. It defaults to the host serving the site.
 const socket = io();
 
 function App() {
@@ -137,7 +136,7 @@ function App() {
 
         <div className="chat-window">
           {systemMsg && <div className="sys-msg"> &gt; {systemMsg}</div>}
-          
+
           {notes.map((note, idx) => (
              note.system ? 
              <div key={idx} className="sys-msg">{note.text}</div> :
