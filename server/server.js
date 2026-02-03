@@ -1,62 +1,27 @@
-const express = require('express');
-const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
-const nodemailer = require('nodemailer');
+const fs = require('fs');
 const path = require('path');
+const csvFilePath = path.join(__dirname, 'chat_log.csv');
 
-app.use(express.static('public'));
+// Initialize CSV with headers if it doesn't exist
+if (!fs.existsSync(csvFilePath)) {
+    fs.writeFileSync(csvFilePath, 'Name,Email,Message\n');
+}
 
-let chatTranscript = [];
-
-// 1. CONFIGURE YOUR EMAIL HERE
-// For Gmail, search "Gmail App Password" to get a secure 16-character code
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: 'milan.inclass@gmail.com',
-        pass: 'vepCas-2dunno-duczoz' 
-    }
-});
-
+// Inside your Socket.io connection logic
 io.on('connection', (socket) => {
-    console.log('User connected to Mac system');
+    socket.on('send-message', (data) => {
+        // 1. Extract data (Assuming client sends { name, email, message })
+        const { name, email, message } = data;
 
-    socket.on('chat message', (data) => {
-        // Record message for the transcript (we skip the raw image data to keep emails small)
-        chatTranscript.push({
-            user: data.user,
-            text: data.text || "[Image Shared]",
-            time: new Date().toLocaleTimeString()
-        });
-        
-        // Send message + image to all clients
-        io.emit('chat message', data);
-    });
+        // 2. Format for CSV (handle commas in messages by wrapping in quotes)
+        const csvLine = `"${name}","${email}","${message.replace(/"/g, '""')}"\n`;
 
-    // This is triggered when you click the 'Close Box' on the 90s window
-    socket.on('end-session', () => {
-        if (chatTranscript.length === 0) return;
-
-        let emailBody = "Retro Chat Session Transcript:\n\n";
-        chatTranscript.forEach(m => {
-            emailBody += `[${m.time}] ${m.user}: ${m.text}\n`;
+        // 3. Append to the file
+        fs.appendFile(csvFilePath, csvLine, (err) => {
+            if (err) console.error("Error saving to CSV:", err);
         });
 
-        const mailOptions = {
-            from: 'milan.inclass@gmail.com',
-            to: 'milan.inclass@gmail.com',
-            subject: 'Chat Transcript',
-            text: emailBody
-        };
-
-        transporter.sendMail(mailOptions, (err, info) => {
-            if (!err) {
-                console.log("Transcript emailed successfully.");
-                chatTranscript = []; // Reset for next class
-            }
-        });
+        // 4. Broadcast the message to others as usual
+        io.emit('receive-message', data);
     });
 });
-
-http.listen(3000, () => console.log('Server active on port 3000'));
