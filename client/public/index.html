@@ -1,69 +1,120 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Mac OS 9 Chat</title>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro In-Class Chat v2 (Online)</title>
+    <style>
+        :root { --bg-color: #0d0d0d; --term-green: #4af626; --term-dim: #225f15; --font-stack: 'Courier New', Courier, monospace; }
+        body { background-color: var(--bg-color); color: var(--term-green); font-family: var(--font-stack); margin: 0; padding: 20px; display: flex; justify-content: center; height: 100vh; box-sizing: border-box; }
+        .container { width: 100%; max-width: 800px; display: flex; flex-direction: column; border: 2px solid var(--term-green); box-shadow: 0 0 15px var(--term-dim); background-color: #000; position: relative; }
+        .container::before { content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); z-index: 2; background-size: 100% 2px, 3px 100%; pointer-events: none; }
+        header { border-bottom: 2px solid var(--term-green); padding: 10px; text-align: center; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
+        #chat-window { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .message-line { line-height: 1.4; word-wrap: break-word; }
+        .timestamp { color: var(--term-dim); margin-right: 10px; font-size: 0.8em; }
+        .username { font-weight: bold; margin-right: 5px; }
+        .controls { border-top: 2px solid var(--term-green); padding: 15px; display: flex; gap: 10px; background-color: #000; z-index: 3; }
+        input[type="text"] { background-color: #111; border: 1px solid var(--term-green); color: var(--term-green); font-family: var(--font-stack); padding: 8px; outline: none; }
+        #username-input { width: 100px; text-align: center; }
+        #message-input { flex: 1; }
+        button { background-color: var(--term-green); color: #000; border: none; font-family: var(--font-stack); font-weight: bold; padding: 8px 15px; cursor: pointer; text-transform: uppercase; }
+        button:hover { background-color: #fff; }
+        button#end-chat-btn { background-color: #a00; color: #fff; }
+        button#end-chat-btn:hover { background-color: #f00; }
+    </style>
 </head>
 <body>
-    <div class="mac-window">
-        <div class="title-bar">
-            <div class="close-box" id="exitBtn" title="Close & Email Transcript"></div>
-            <div class="title-lines"></div>
-            <span class="title-text">Chat Messenger</span>
-            <div class="title-lines"></div>
-        </div>
-        
-        <div id="chat-content"></div>
 
-        <div class="input-panel">
-            <input id="userName" placeholder="Name..." class="mac-input">
-            <input id="msgInput" placeholder="Enter message" class="mac-input">
-            <label for="imgUpload" class="mac-btn">📷</label>
-            <input type="file" id="imgUpload" accept="image/*" style="display:none">
-            <button class="mac-btn" onclick="send()">Send</button>
-        </div>
+<div class="container">
+    <header>Retro Chat v2.0 [Online Mode]</header>
+    <div id="chat-window">
+        <div class="message-line"><span class="timestamp">[SYSTEM]</span><span class="username">Console:</span><span>Connected to global frequency.</span></div>
     </div>
+    <div class="controls">
+        <input type="text" id="username-input" value="Guest" placeholder="User">
+        <input type="text" id="message-input" placeholder="Type message..." autocomplete="off">
+        <button id="send-btn">Send</button>
+        <button id="end-chat-btn">End & Save</button>
+    </div>
+</div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
+<!-- Load Socket.io Client Library -->
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io(); // Connect to the server
+    let chatHistory = [];
+    
+    const chatWindow = document.getElementById('chat-window');
+    const messageInput = document.getElementById('message-input');
+    const usernameInput = document.getElementById('username-input');
+    const sendBtn = document.getElementById('send-btn');
+    const endChatBtn = document.getElementById('end-chat-btn');
 
-        function send() {
-            const user = document.getElementById('userName').value || 'Guest';
-            const text = document.getElementById('msgInput').value;
-            const file = document.getElementById('imgUpload').files[0];
+    // 1. Send Message to Server
+    function sendMessage() {
+        const text = messageInput.value.trim();
+        const user = usernameInput.value.trim() || "Anonymous";
+        if (text === "") return;
 
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    socket.emit('chat message', { user, text, img: e.target.result });
-                };
-                reader.readAsDataURL(file);
-            } else if (text) {
-                socket.emit('chat message', { user, text });
-            }
-            
-            document.getElementById('msgInput').value = '';
-            document.getElementById('imgUpload').value = '';
-        }
+        const timestamp = new Date().toLocaleTimeString();
+        
+        // Emit event to server
+        socket.emit('chat message', { user, text, timestamp });
 
-        socket.on('chat message', (data) => {
-            const div = document.createElement('div');
-            div.className = 'message';
-            div.innerHTML = `<strong>${data.user}:</strong> ${data.text}`;
-            if (data.img) {
-                div.innerHTML += `<br><img src="${data.img}" class="chat-img">`;
-            }
-            document.getElementById('chat-content').appendChild(div);
-            div.scrollIntoView();
+        messageInput.value = '';
+        messageInput.focus();
+    }
+
+    // 2. Receive Message from Server
+    socket.on('chat message', (msg) => {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message-line';
+        msgDiv.innerHTML = `<span class="timestamp">[${msg.timestamp}]</span><span class="username">${escapeHtml(msg.user)}:</span><span>${escapeHtml(msg.text)}</span>`;
+        
+        chatWindow.appendChild(msgDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        
+        // Save to local history for download
+        chatHistory.push(`[${msg.timestamp}] ${msg.user}: ${msg.text}`);
+    });
+
+    // Event Listeners
+    sendBtn.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+    endChatBtn.addEventListener('click', endChatAndDownload);
+
+    function endChatAndDownload() {
+        if (chatHistory.length === 0) { alert("No chat history to save."); return; }
+        if (!confirm("End chat and download log?")) return;
+
+        const logContent = chatHistory.join('\n');
+        const blob = new Blob([logContent], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `chat_transcript_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Disconnect socket so user stops receiving messages
+        socket.disconnect();
+        messageInput.disabled = true;
+        sendBtn.disabled = true;
+        endChatBtn.disabled = true;
+        
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message-line';
+        msgDiv.style.color = '#ffff00';
+        msgDiv.innerHTML = `<span class="timestamp">[SYSTEM]</span> Disconnected. Refresh to reconnect.`;
+        chatWindow.appendChild(msgDiv);
+    }
+
+    function escapeHtml(text) {
+        return text.replace(/[&<>"']/g, function(m) { 
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[m]; 
         });
-
-        document.getElementById('exitBtn').onclick = () => {
-            if(confirm("Exit and email the transcript?")) {
-                socket.emit('end-session');
-                alert("Session closed. Transcript sent.");
-            }
-        };
-    </script>
+    }
+</script>
 </body>
 </html>
