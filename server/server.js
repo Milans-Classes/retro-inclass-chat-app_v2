@@ -7,37 +7,35 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// FIX: Adjust path for structure: server/server.js -> client/public/index.html
-// 1. __dirname is '/.../server'
-// 2. '..' goes up to root
-// 3. 'client/public' goes down into the correct folder
+// Adjust path for structure: server/server.js -> client/public/index.html
 const clientPath = path.join(__dirname, '../client/public');
 
-console.log(`Serving static files from: ${clientPath}`);
-
-// Serve static files (css, js, images) from that folder
 app.use(express.static(clientPath));
 
-// Explicitly serve index.html for the root route
 app.get('/', (req, res) => {
-    const indexPath = path.join(clientPath, 'index.html');
-    res.sendFile(indexPath, (err) => {
-        if (err) {
-            console.error("Error sending index.html:", err);
-            res.status(500).send("Error loading chat. Check server logs.");
-        }
-    });
+    res.sendFile(path.join(clientPath, 'index.html'));
 });
 
 io.on('connection', (socket) => {
-    console.log('A user connected');
+    // 1. Handle Joining a specific Session (Room)
+    socket.on('join room', (roomCode) => {
+        socket.join(roomCode);
+        console.log(`User joined room: ${roomCode}`);
+    });
 
-    socket.on('chat message', (msg) => {
-        io.emit('chat message', msg);
+    // 2. Handle Chat Messages (Only send to specific room)
+    socket.on('chat message', (data) => {
+        // data = { room, user, text, timestamp, role }
+        io.to(data.room).emit('chat message', data);
+    });
+
+    // 3. Handle Session End (Instructor only)
+    socket.on('end session', (roomCode) => {
+        io.to(roomCode).emit('session ended');
     });
 
     socket.on('disconnect', () => {
-        console.log('User disconnected');
+        // Standard disconnect
     });
 });
 

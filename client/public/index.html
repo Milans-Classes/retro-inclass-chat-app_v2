@@ -3,111 +3,384 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro In-Class Chat v2 (Online)</title>
+    <title>ClassChat 1.0</title>
     <style>
-        :root { --bg-color: #0d0d0d; --term-green: #4af626; --term-dim: #225f15; --font-stack: 'Courier New', Courier, monospace; }
-        body { background-color: var(--bg-color); color: var(--term-green); font-family: var(--font-stack); margin: 0; padding: 20px; display: flex; justify-content: center; height: 100vh; box-sizing: border-box; }
-        .container { width: 100%; max-width: 800px; display: flex; flex-direction: column; border: 2px solid var(--term-green); box-shadow: 0 0 15px var(--term-dim); background-color: #000; position: relative; }
-        .container::before { content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); z-index: 2; background-size: 100% 2px, 3px 100%; pointer-events: none; }
-        header { border-bottom: 2px solid var(--term-green); padding: 10px; text-align: center; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
-        #chat-window { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .message-line { line-height: 1.4; word-wrap: break-word; }
-        .timestamp { color: var(--term-dim); margin-right: 10px; font-size: 0.8em; }
-        .username { font-weight: bold; margin-right: 5px; }
-        .controls { border-top: 2px solid var(--term-green); padding: 15px; display: flex; gap: 10px; background-color: #000; z-index: 3; }
-        input[type="text"] { background-color: #111; border: 1px solid var(--term-green); color: var(--term-green); font-family: var(--font-stack); padding: 8px; outline: none; }
-        #username-input { width: 100px; text-align: center; }
-        #message-input { flex: 1; }
-        button { background-color: var(--term-green); color: #000; border: none; font-family: var(--font-stack); font-weight: bold; padding: 8px 15px; cursor: pointer; text-transform: uppercase; }
-        button:hover { background-color: #fff; }
-        button#end-chat-btn { background-color: #a00; color: #fff; }
-        button#end-chat-btn:hover { background-color: #f00; }
+        /* --- MAC OS 90s AESTHETIC --- */
+        :root {
+            --mac-bg: #ddd; /* Desktop pattern color */
+            --window-bg: #fff;
+            --border: #000;
+            --highlight: #000; /* Selected text */
+            --font-stack: "Geneva", "Verdana", sans-serif;
+        }
+
+        body {
+            background-color: var(--mac-bg);
+            /* Dotted desktop pattern */
+            background-image: radial-gradient(#888 15%, transparent 16%), radial-gradient(#888 15%, transparent 16%);
+            background-size: 4px 4px;
+            background-position: 0 0, 2px 2px;
+            font-family: var(--font-stack);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Window Frame */
+        .mac-window {
+            width: 600px;
+            height: 450px;
+            background: var(--window-bg);
+            border: 1px solid var(--border);
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Title Bar */
+        .title-bar {
+            height: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: repeating-linear-gradient(
+                180deg,
+                #fff,
+                #fff 1px,
+                #ccc 1px,
+                #ccc 2px
+            );
+            position: relative;
+            cursor: default;
+        }
+
+        .close-box {
+            width: 12px;
+            height: 12px;
+            border: 1px solid var(--border);
+            background: #fff;
+            position: absolute;
+            left: 8px;
+            top: 3px;
+            box-shadow: 1px 1px 0 #000;
+        }
+
+        .window-title {
+            background: #fff;
+            padding: 0 10px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            font-size: 12px;
+        }
+
+        /* Screens (Login vs Chat) */
+        .screen {
+            display: none; /* Hidden by default */
+            height: 100%;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+        .screen.active {
+            display: flex;
+        }
+
+        /* Chat Specifics */
+        #chat-screen {
+            justify-content: flex-start;
+            align-items: stretch;
+        }
+
+        #chat-history {
+            flex: 1;
+            border: 1px solid var(--border);
+            margin-bottom: 10px;
+            padding: 5px;
+            overflow-y: scroll;
+            background: #fff;
+            font-family: "Monaco", "Courier New", monospace;
+        }
+
+        .message-line { margin-bottom: 4px; }
+        .msg-time { color: #666; margin-right: 5px; }
+        .msg-user { font-weight: bold; }
+        .msg-instructor { color: #0000aa; } /* Instructor text color */
+
+        /* Controls */
+        .controls-row {
+            display: flex;
+            gap: 5px;
+        }
+
+        input[type="text"], input[type="email"] {
+            border: 1px solid var(--border);
+            padding: 4px;
+            font-family: var(--font-stack);
+            font-size: 12px;
+            box-shadow: 1px 1px 0 #ccc inset;
+        }
+
+        button {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 4px 12px;
+            font-family: var(--font-stack);
+            font-size: 11px;
+            cursor: pointer;
+            box-shadow: 1px 1px 0 #000;
+        }
+        button:active {
+            background: #000;
+            color: #fff;
+            box-shadow: none;
+            transform: translate(1px, 1px);
+        }
+
+        .hidden { display: none !important; }
+        
+        h2 { margin: 0 0 10px 0; font-size: 14px; text-align: center; }
+        .label-text { width: 80px; display: inline-block; text-align: right; margin-right: 10px;}
+        .form-row { margin-bottom: 8px; }
+
+        /* Scrollbar styling for Webkit */
+        ::-webkit-scrollbar { width: 12px; }
+        ::-webkit-scrollbar-track { background: #fff; border-left: 1px solid #000; }
+        ::-webkit-scrollbar-thumb { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36zwjjgzhhYWGMYAEYB8RmROaABADeOQ8CXl/xfgAAAABJRU5ErkJggg=='); border: 1px solid #000; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <header>Retro Chat v2.0 [Online Mode]</header>
-    <div id="chat-window">
-        <div class="message-line"><span class="timestamp">[SYSTEM]</span><span class="username">Console:</span><span>Connected to global frequency.</span></div>
+<div class="mac-window">
+    <div class="title-bar">
+        <div class="close-box"></div>
+        <div class="window-title">ClassChat 1.0</div>
     </div>
-    <div class="controls">
-        <input type="text" id="username-input" value="Guest" placeholder="User">
-        <input type="text" id="message-input" placeholder="Type message..." autocomplete="off">
-        <button id="send-btn">Send</button>
-        <button id="end-chat-btn">End & Save</button>
+    
+    <div class="content">
+        
+        <!-- SCREEN 1: ROLE SELECTION -->
+        <div id="role-screen" class="screen active">
+            <h2>Welcome to ClassChat</h2>
+            <p>Please select your role:</p>
+            <div style="display: flex; gap: 20px;">
+                <button onclick="selectRole('instructor')">Instructor</button>
+                <button onclick="selectRole('student')">Student</button>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: INSTRUCTOR SETUP -->
+        <div id="instructor-setup-screen" class="screen">
+            <h2>Instructor Station</h2>
+            <p>Your Session Code is:</p>
+            <h1 id="generated-code" style="font-family: 'Monaco'; font-size: 24px; letter-spacing: 2px; border: 1px dashed #000; padding: 5px;">Loading...</h1>
+            <p>Share this code with your students.</p>
+            <button onclick="startInstructorSession()">Open Chat Window</button>
+        </div>
+
+        <!-- SCREEN 3: STUDENT LOGIN -->
+        <div id="student-login-screen" class="screen">
+            <h2>Student Login</h2>
+            <div class="form-row">
+                <span class="label-text">Name:</span>
+                <input type="text" id="stu-name" placeholder="John Doe">
+            </div>
+            <div class="form-row">
+                <span class="label-text">Email:</span>
+                <input type="email" id="stu-email" placeholder="john@school.edu">
+            </div>
+            <div class="form-row">
+                <span class="label-text">Code:</span>
+                <input type="text" id="stu-code" placeholder="123456" maxlength="6">
+            </div>
+            <button onclick="startStudentSession()">Join Session</button>
+        </div>
+
+        <!-- SCREEN 4: CHAT INTERFACE -->
+        <div id="chat-screen" class="screen">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span id="session-info">Session: ???</span>
+                <span id="user-info">User: ???</span>
+            </div>
+            
+            <div id="chat-history"></div>
+            
+            <div class="controls-row">
+                <input type="text" id="message-input" style="flex:1;" placeholder="Type a message..." autocomplete="off">
+                <button id="send-btn">Send</button>
+                <button id="end-btn" class="hidden" style="border-color: #a00;">End & Save</button>
+            </div>
+        </div>
+
     </div>
 </div>
 
-<!-- Load Socket.io Client Library -->
 <script src="/socket.io/socket.io.js"></script>
 <script>
-    const socket = io(); // Connect to the server
-    let chatHistory = [];
+    const socket = io();
     
-    const chatWindow = document.getElementById('chat-window');
-    const messageInput = document.getElementById('message-input');
-    const usernameInput = document.getElementById('username-input');
-    const sendBtn = document.getElementById('send-btn');
-    const endChatBtn = document.getElementById('end-chat-btn');
+    // State
+    let currentUser = { name: "", email: "", role: "", room: "" };
+    let chatLog = [];
 
-    // 1. Send Message to Server
-    function sendMessage() {
-        const text = messageInput.value.trim();
-        const user = usernameInput.value.trim() || "Anonymous";
-        if (text === "") return;
+    // DOM Elements
+    const screens = {
+        role: document.getElementById('role-screen'),
+        instructor: document.getElementById('instructor-setup-screen'),
+        student: document.getElementById('student-login-screen'),
+        chat: document.getElementById('chat-screen')
+    };
+    
+    const chatHistoryDiv = document.getElementById('chat-history');
+    const msgInput = document.getElementById('message-input');
+    const endBtn = document.getElementById('end-btn');
 
-        const timestamp = new Date().toLocaleTimeString();
-        
-        // Emit event to server
-        socket.emit('chat message', { user, text, timestamp });
-
-        messageInput.value = '';
-        messageInput.focus();
+    // --- NAVIGATION ---
+    function showScreen(name) {
+        Object.values(screens).forEach(s => s.classList.remove('active'));
+        screens[name].classList.add('active');
     }
 
-    // 2. Receive Message from Server
+    function selectRole(role) {
+        currentUser.role = role;
+        if (role === 'instructor') {
+            // Generate random 6 digit code
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            currentUser.room = code;
+            currentUser.name = "Instructor";
+            document.getElementById('generated-code').innerText = code;
+            showScreen('instructor');
+        } else {
+            showScreen('student');
+        }
+    }
+
+    // --- SESSION START ---
+    function startInstructorSession() {
+        joinChatRoom();
+        // Show End Button for Instructor
+        endBtn.classList.remove('hidden');
+    }
+
+    function startStudentSession() {
+        const name = document.getElementById('stu-name').value.trim();
+        const email = document.getElementById('stu-email').value.trim();
+        const code = document.getElementById('stu-code').value.trim();
+
+        if(!name || !email || !code) {
+            alert("Please fill in all fields.");
+            return;
+        }
+
+        currentUser.name = name;
+        currentUser.email = email;
+        currentUser.room = code;
+
+        joinChatRoom();
+    }
+
+    function joinChatRoom() {
+        // Update UI Info
+        document.getElementById('session-info').innerText = `Session: ${currentUser.room}`;
+        document.getElementById('user-info').innerText = `User: ${currentUser.name}`;
+        
+        // Connect via Socket
+        socket.emit('join room', currentUser.room);
+        
+        showScreen('chat');
+        addSystemMessage(`Joined session ${currentUser.room} as ${currentUser.role}.`);
+    }
+
+    // --- CHAT LOGIC ---
+    document.getElementById('send-btn').addEventListener('click', sendMessage);
+    msgInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
+
+    function sendMessage() {
+        const text = msgInput.value.trim();
+        if(!text) return;
+
+        const payload = {
+            room: currentUser.room,
+            user: currentUser.name,
+            role: currentUser.role,
+            text: text,
+            timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        };
+
+        socket.emit('chat message', payload);
+        msgInput.value = '';
+        msgInput.focus();
+    }
+
+    // Receive Message
     socket.on('chat message', (msg) => {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message-line';
-        msgDiv.innerHTML = `<span class="timestamp">[${msg.timestamp}]</span><span class="username">${escapeHtml(msg.user)}:</span><span>${escapeHtml(msg.text)}</span>`;
+        const div = document.createElement('div');
+        div.className = 'message-line';
         
-        chatWindow.appendChild(msgDiv);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
+        // Style instructor differently
+        const userClass = msg.role === 'instructor' ? 'msg-user msg-instructor' : 'msg-user';
         
-        // Save to local history for download
-        chatHistory.push(`[${msg.timestamp}] ${msg.user}: ${msg.text}`);
+        div.innerHTML = `<span class="msg-time">[${msg.timestamp}]</span><span class="${userClass}">${escapeHtml(msg.user)}:</span> <span>${escapeHtml(msg.text)}</span>`;
+        
+        chatHistoryDiv.appendChild(div);
+        chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+
+        // Add to local log for saving
+        chatLog.push(`[${msg.timestamp}] ${msg.user} (${msg.role}): ${msg.text}`);
     });
 
-    // Event Listeners
-    sendBtn.addEventListener('click', sendMessage);
-    messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
-    endChatBtn.addEventListener('click', endChatAndDownload);
+    // --- END & SAVE (Instructor Only) ---
+    endBtn.addEventListener('click', () => {
+        if(!confirm("End session and download transcript?")) return;
 
-    function endChatAndDownload() {
-        if (chatHistory.length === 0) { alert("No chat history to save."); return; }
-        if (!confirm("End chat and download log?")) return;
+        // 1. Notify server to end session for everyone
+        socket.emit('end session', currentUser.room);
 
-        const logContent = chatHistory.join('\n');
-        const blob = new Blob([logContent], { type: 'text/plain' });
+        // 2. Download Log
+        downloadLog();
+    });
+
+    socket.on('session ended', () => {
+        addSystemMessage("--- SESSION ENDED BY INSTRUCTOR ---");
+        msgInput.disabled = true;
+        document.getElementById('send-btn').disabled = true;
+        endBtn.disabled = true;
+        
+        // If instructor, the download triggers in the click handler. 
+        // If student, they just see the message.
+    });
+
+    function downloadLog() {
+        const content = chatLog.join('\n');
+        const blob = new Blob([content], {type: 'text/plain'});
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `chat_transcript_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+        a.download = `ClassChat_${currentUser.room}_${Date.now()}.txt`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        
-        // Disconnect socket so user stops receiving messages
-        socket.disconnect();
-        messageInput.disabled = true;
-        sendBtn.disabled = true;
-        endChatBtn.disabled = true;
-        
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message-line';
-        msgDiv.style.color = '#ffff00';
-        msgDiv.innerHTML = `<span class="timestamp">[SYSTEM]</span> Disconnected. Refresh to reconnect.`;
-        chatWindow.appendChild(msgDiv);
+    }
+
+    function addSystemMessage(text) {
+        const div = document.createElement('div');
+        div.style.color = '#666';
+        div.style.fontStyle = 'italic';
+        div.innerText = `>> ${text}`;
+        chatHistoryDiv.appendChild(div);
     }
 
     function escapeHtml(text) {
@@ -116,5 +389,6 @@
         });
     }
 </script>
+
 </body>
 </html>
