@@ -29,7 +29,7 @@
             overflow: hidden;
         }
 
-        /* Window Frame - UPDATED: Bigger and Wider */
+        /* Window Frame */
         .mac-window {
             width: 900px;
             height: 650px;
@@ -182,7 +182,6 @@
 <div class="mac-window">
     <div class="title-bar">
         <div class="close-box"></div>
-        <!-- UPDATED NAME -->
         <div class="window-title">DSO 531 In Class Chat</div>
     </div>
     
@@ -190,7 +189,6 @@
         
         <!-- SCREEN 1: ROLE SELECTION -->
         <div id="role-screen" class="screen active">
-            <!-- UPDATED LOGO -->
             <img src="https://avatars.githubusercontent.com/u/256480427?s=200&v=4" alt="Logo" class="retro-logo">
             
             <h2>DSO 531 In Class Chat</h2>
@@ -204,8 +202,14 @@
         <!-- SCREEN 2: INSTRUCTOR SETUP -->
         <div id="instructor-setup-screen" class="screen">
             <h2>Instructor Station</h2>
+            
+            <!-- ADDED: Instructor Email Input -->
+            <div class="form-row">
+                <span class="label-text">Email:</span>
+                <input type="email" id="inst-email" placeholder="prof@usc.edu">
+            </div>
+
             <p>Your Session Code is:</p>
-            <!-- Code will be 3 digits now -->
             <h1 id="generated-code" style="font-family: 'Monaco'; font-size: 48px; letter-spacing: 5px; border: 2px dashed #000; padding: 10px 20px;">...</h1>
             <p>Share this code with your students.</p>
             <button onclick="startInstructorSession()">Open Chat Window</button>
@@ -224,7 +228,6 @@
             </div>
             <div class="form-row">
                 <span class="label-text">Code:</span>
-                <!-- Updated placeholder for 3 digits -->
                 <input type="text" id="stu-code" placeholder="123" maxlength="3" style="width: 60px; text-align: center;">
             </div>
             <button onclick="startStudentSession()">Join Session</button>
@@ -278,7 +281,7 @@
     function selectRole(role) {
         currentUser.role = role;
         if (role === 'instructor') {
-            // UPDATED: Generate random 3 digit code (100 - 999)
+            // Generate random 3 digit code (100 - 999)
             const code = Math.floor(100 + Math.random() * 900).toString();
             currentUser.room = code;
             currentUser.name = "Instructor";
@@ -291,6 +294,16 @@
 
     // --- SESSION START ---
     function startInstructorSession() {
+        // Validate Email
+        const emailInput = document.getElementById('inst-email');
+        const email = emailInput.value.trim();
+        
+        if(!email) {
+            alert("Please enter your email address.");
+            return;
+        }
+        
+        currentUser.email = email;
         joinChatRoom();
         // Show End Button for Instructor
         endBtn.classList.remove('hidden');
@@ -336,6 +349,7 @@
         const payload = {
             room: currentUser.room,
             user: currentUser.name,
+            email: currentUser.email, // ADDED: Send email with message
             role: currentUser.role,
             text: text,
             timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
@@ -359,8 +373,9 @@
         chatHistoryDiv.appendChild(div);
         chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
 
-        // Add to local log for saving
-        chatLog.push(`[${msg.timestamp}] ${msg.user} (${msg.role}): ${msg.text}`);
+        // ADDED: Save to local log with Name, Email, Comment format
+        // Format: [Timestamp] Name | Email | Comment
+        chatLog.push(`[${msg.timestamp}] ${msg.user} | ${msg.email} | ${msg.text}`);
     });
 
     // --- END & SAVE (Instructor Only) ---
