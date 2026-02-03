@@ -14,8 +14,8 @@ let chatTranscript = [];
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'your-email@gmail.com',
-        pass: 'your-app-password' 
+        user: 'milan.inclass@gmail.com',
+        pass: 'vepCas-2dunno-duczoz' 
     }
 });
 
@@ -44,9 +44,9 @@ io.on('connection', (socket) => {
         });
 
         const mailOptions = {
-            from: 'your-email@gmail.com',
-            to: 'recipient-teacher@example.com',
-            subject: 'Mac Chat Transcript',
+            from: 'milan.inclass@gmail.com',
+            to: 'milan.inclass@gmail.com',
+            subject: 'Chat Transcript',
             text: emailBody
         };
 
